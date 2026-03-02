@@ -91,6 +91,14 @@ for c in [col_itens, col_uniforme, col_produtos, col_atendimento, col_horario]:
 
 df_dash[col_nota] = pd.to_numeric(df_dash[col_nota], errors="coerce").fillna(5).astype(int)
 
+# === Parte 2A: gerar JSON para o seletor de mês ===
+df_dash["Submitted at"] = pd.to_datetime(df_dash["Submitted at"], errors="coerce")
+df_dash = df_dash.dropna(subset=["Submitted at"])
+
+# Data como string (pra não quebrar no JS)
+df_dash["Submitted at"] = df_dash["Submitted at"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+dashboard_data = df_dash.to_dict(orient="records")
     # Recorte do mês atual (opcional)
     if USE_CURRENT_MONTH:
         now = datetime.datetime.now()
