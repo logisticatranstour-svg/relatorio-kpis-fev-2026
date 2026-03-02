@@ -71,6 +71,7 @@ def main():
 
     df[col_nota] = pd.to_numeric(df[col_nota], errors="coerce")
     df.loc[refusal_row_mask | df[col_nota].isna(), col_nota] = 5
+    df["month"] = df["Submitted at"].dt.to_period("M").astype(str)
 
     dataset_cols = [
     "Submitted at",
