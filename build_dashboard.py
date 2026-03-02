@@ -72,6 +72,24 @@ def main():
     df[col_nota] = pd.to_numeric(df[col_nota], errors="coerce")
     df.loc[refusal_row_mask | df[col_nota].isna(), col_nota] = 5
 
+    dataset_cols = [
+    "Submitted at",
+    "month",
+    col_itens,
+    col_uniforme,
+    col_produtos,
+    col_atendimento,
+    col_horario,
+    col_nota
+]
+
+df_dash = df[dataset_cols].copy()
+
+for c in [col_itens, col_uniforme, col_produtos, col_atendimento, col_horario]:
+    df_dash[c] = df_dash[c].astype(str).str.strip()
+
+df_dash[col_nota] = pd.to_numeric(df_dash[col_nota], errors="coerce").fillna(5).astype(int)
+
     # Recorte do mês atual (opcional)
     if USE_CURRENT_MONTH:
         now = datetime.datetime.now()
