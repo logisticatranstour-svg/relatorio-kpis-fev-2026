@@ -270,6 +270,14 @@ dashboard_data = df_dash.to_dict(orient="records")
         <div style="flex:1;min-width:260px;text-align:center">
           <h1>RELATÓRIO GERENCIAL DE KPIs</h1>
           <div class="sub">Satisfação de Entregas • Período: <b>{period_title}</b> • Base: <b>{n}</b> respostas</div>
+          <div style="margin-top:10px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+  <label style="font-size:12px; opacity:.95;">
+    Mês:
+    <select id="monthSelect" style="margin-left:8px; padding:8px 10px; border-radius:10px; border:0; outline:none;">
+    </select>
+  </label>
+  <span style="font-size:12px; opacity:.9;" id="monthHint"></span>
+</div>
           <div class="sub" style="font-size:12px">Recorte detectado no arquivo: <b>{period_label}</b> • Atualizado: <b>{generated}</b></div>
         </div>
         <div style="min-width:160px;text-align:right;opacity:.95">
@@ -280,17 +288,37 @@ dashboard_data = df_dash.to_dict(orient="records")
     </div>
 
     <div class="grid">
-      <div class="card"><div class="kpiV">{n}</div><div class="kpiL">Total de Respostas</div><span class="badge ok">Amostra do período</span></div>
-      <div class="card"><div class="kpiV">{rate5:.1f}%</div><div class="kpiL">Taxa de Satisfação Geral (Nota 5)</div><span class="badge ok">Meta sugerida: ≥ 80%</span></div>
-      <div class="card"><div class="kpiV">{itens_pct:.1f}%</div><div class="kpiL">Itens Entregues Corretamente</div><span class="badge {"warn" if itens_pct<90 else "ok"}">Meta: 90%</span></div>
-      <div class="card"><div class="kpiV">{itens_pct:.0f}</div><div class="kpiL">NPS Estimado (proxy)</div><span class="badge ok">Proxy = acuracidade</span></div>
-    </div>
+      <div class="card">
+  <div class="kpiV" id="kpiTotal">{n}</div>
+  <div class="kpiL">Total de Respostas</div>
+  ...
+</div>
+
+<div class="card">
+  <div class="kpiV" id="kpiSat5">{rate5:.1f}%</div>
+  <div class="kpiL">Taxa de Satisfação Geral (Nota 5)</div>
+  ...
+</div>
+
+<div class="card">
+  <div class="kpiV" id="kpiItens">{itens_pct:.1f}%</div>
+  <div class="kpiL">Itens Entregues Corretamente</div>
+  ...
+</div>
+
+<div class="card">
+  <div class="kpiV" id="kpiNps">{itens_pct:.0f}</div>
+  <div class="kpiL">NPS Estimado (proxy)</div>
+  ...
+</div>
 
     <div class="section">
       <h3 class="title">📈 Indicadores por Categoria</h3>
       <table>
         <thead><tr><th>Indicador</th><th>Sim</th><th>Não</th><th>% Positivo</th><th>Meta</th><th>Status</th></tr></thead>
-        <tbody>{cat_rows_html}</tbody>
+        <tbody id="tbodyIndicadores">
+  <!-- preenchido via JS pelo seletor de mês -->
+</tbody>
       </table>
       <div class="muted">* % Positivo calculado sobre o total de respostas do período.</div>
     </div>
@@ -334,8 +362,10 @@ dashboard_data = df_dash.to_dict(orient="records")
 </div>
 
 <script>
+const DASHBOARD_DATA = {json.dumps(dashboard_data)};
+</script>
   const satCtx = document.getElementById('sat').getContext('2d');
-  new Chart(satCtx, {{
+  window.satChart = new Chart(satCtx, { ... })
     type: 'bar',
     data: {{
       labels: ['1','2','3','4','5'],
@@ -348,7 +378,128 @@ dashboard_data = df_dash.to_dict(orient="records")
   }});
 
   const barCtx = document.getElementById('bars').getContext('2d');
-  new Chart(barCtx, {{
+  window.barChart = new Chart(barCtx, { ... })// ===== Seletor de mês (dropdown) =====
+function pct(n, d){ return d === 0 ? 0 : (n/d)*100; }
+
+function getMonths(data){
+  const set = new Set(data.map(r => r.month));
+  return Array.from(set).sort(); // YYYY-MM
+}
+
+function filterByMonth(data, month){
+  return data.filter(r => r.month === month);
+}
+
+function countSimNao(arr, field){
+  let sim = 0, nao = 0;
+  for(const r of arr){
+    const v = (r[field] ?? "").toString().trim().toLowerCase();
+    if(v === "sim") sim++;
+    if(v === "não" || v === "nao") nao++;
+  }
+  return {sim, nao};
+}
+
+function calcKPIs(arr){
+  const total = arr.length;
+
+  const itens = countSimNao(arr, "Todos os itens foram entregues corretamente?");
+  const uniforme = countSimNao(arr, "Entregador apresentou-se com crachá e uniforme?");
+  const produtos = countSimNao(arr, "Produtos em bom estado e dentro da validade?");
+  const atendimento = countSimNao(arr, "Atendimento cordial e respeitoso?");
+  const horario = countSimNao(arr, "Entrega ocorreu no horário combinado?");
+
+  const notas = arr.map(r => Number(r["GRAU DE SATISFAÇÃO (1 A 5)"])).filter(x => !Number.isNaN(x));
+  const mean = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
+  const rate5 = notas.length ? (notas.filter(x=>x===5).length/notas.length)*100 : 0;
+
+  return { total, mean, rate5, itens, uniforme, produtos, atendimento, horario };
+}
+
+function refreshUI(arr){
+  const k = calcKPIs(arr);
+
+  // Cards
+  const elTotal = document.getElementById("kpiTotal");
+  const elSat5 = document.getElementById("kpiSat5");
+  const elItens = document.getElementById("kpiItens");
+  const elNps = document.getElementById("kpiNps");
+
+  if(elTotal) elTotal.textContent = k.total;
+  if(elSat5) elSat5.textContent = `${k.rate5.toFixed(1)}%`;
+  if(elItens) elItens.textContent = `${pct(k.itens.sim, k.total).toFixed(1)}%`;
+  if(elNps) elNps.textContent = `${pct(k.itens.sim, k.total).toFixed(0)}`;
+
+  // Tabela Indicadores
+  const tbody = document.getElementById("tbodyIndicadores");
+  if(tbody){
+    const rows = [
+      ["Itens Entregues Corretamente", k.itens, 90],
+      ["Crachá e Uniforme", k.uniforme, 95],
+      ["Produtos em Bom Estado", k.produtos, 95],
+      ["Atendimento Cordial", k.atendimento, 95],
+      ["Pontualidade", k.horario, 90],
+    ];
+
+    tbody.innerHTML = rows.map(([name, obj, meta]) => {
+      const pos = pct(obj.sim, k.total);
+      const status = pos >= meta ? "✓ Excelente" : (pos >= 80 ? "⚠️ Atenção" : "⚠️ Atenção");
+      return `
+        <tr>
+          <td>${name}</td>
+          <td>${obj.sim}</td>
+          <td>${obj.nao}</td>
+          <td>${pos.toFixed(1)}%</td>
+          <td>${meta}%</td>
+          <td>${status}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // Hint
+  const hint = document.getElementById("monthHint");
+  if(hint) hint.textContent = `Base do mês: ${k.total} respostas`;
+
+  // Gráfico Satisfação
+  if(window.satChart){
+    const counts = [1,2,3,4,5].map(n => arr.filter(r => Number(r["GRAU DE SATISFAÇÃO (1 A 5)"]) === n).length);
+    window.satChart.data.datasets[0].data = counts;
+    window.satChart.update();
+  }
+
+  // Gráfico Critérios
+  if(window.barChart){
+    const results = [
+      pct(k.itens.sim, k.total),
+      pct(k.uniforme.sim, k.total),
+      pct(k.produtos.sim, k.total),
+      pct(k.atendimento.sim, k.total),
+      pct(k.horario.sim, k.total),
+    ].map(x => Number(x.toFixed(1)));
+
+    window.barChart.data.datasets[0].data = results;
+    window.barChart.update();
+  }
+}
+
+// Inicialização
+const months = getMonths(DASHBOARD_DATA);
+const select = document.getElementById("monthSelect");
+
+if(select){
+  select.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join("");
+
+  // default: último mês disponível
+  const last = months[months.length-1];
+  select.value = last;
+
+  refreshUI(filterByMonth(DASHBOARD_DATA, last));
+
+  select.addEventListener("change", () => {
+    refreshUI(filterByMonth(DASHBOARD_DATA, select.value));
+  });
+}
     type: 'bar',
     data: {{
       labels: {json.dumps(labels)},
