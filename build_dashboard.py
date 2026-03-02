@@ -10,7 +10,7 @@ import json
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4A5MDb6JivQ54j3B3YrWPIpnidj49zOdeyLsqE1HKy8f35--M3ja_ZG_KntrKKeYOAIWNyS-3QOp8/pub?gid=0&single=true&output=csv"
 
 # 2) Período: mês atual (ajuste se quiser “últimos 30 dias”)
-USE_CURRENT_MONTH = True
+USE_CURRENT_MONTH = False
 
 # 3) Logos (opcional)
 # Se você não quiser mexer com arquivo de logo, deixe vazio e o dashboard não mostra as imagens.
