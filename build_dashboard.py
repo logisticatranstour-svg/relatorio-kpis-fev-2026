@@ -190,7 +190,20 @@ def main():
         <canvas id="bars"></canvas>
       </div>
     </div>
+<div class="section">
+  <h3 class="title">📋 KPIs Detalhados</h3>
+  <table>
+    <thead>
+      <tr><th>KPI</th><th>Valor</th><th>Meta</th><th>Status</th></tr>
+    </thead>
+    <tbody id="tbodyKpisDetalhados"></tbody>
+  </table>
+</div>
 
+<div class="section card insights">
+  <h3 class="title">💡 Insights e Recomendações</h3>
+  <ul id="ulInsights"></ul>
+</div>
     <div class="footer">{FOOTER_TEXT}</div>
   </div>
 </div>
@@ -225,7 +238,25 @@ def main():
     return {{sim, nao}};
   }}
 
-  function calc(arr){{
+  function calc(arr){
+  const total = arr.length;
+
+  const itens = countSimNao(arr, "Todos os itens foram entregues corretamente?");
+  const uniforme = countSimNao(arr, "Entregador apresentou-se com crachá e uniforme?");
+  const produtos = countSimNao(arr, "Produtos em bom estado e dentro da validade?");
+  const atendimento = countSimNao(arr, "Atendimento cordial e respeitoso?");
+  const horario = countSimNao(arr, "Entrega ocorreu no horário combinado?");
+
+  const notas = arr.map(r => Number(r["GRAU DE SATISFAÇÃO (1 A 5)"])).filter(x => !Number.isNaN(x));
+  const notasValidas = notas.length;
+
+  const mean = notasValidas ? (notas.reduce((a,b)=>a+b,0)/notasValidas) : 0;
+  const csat = mean ? (mean/5)*100 : 0;
+  const rate5 = notasValidas ? (notas.filter(x=>x===5).length/notasValidas)*100 : 0;
+  const rate45 = notasValidas ? (notas.filter(x=>x>=4).length/notasValidas)*100 : 0;
+
+  return { total, itens, uniforme, produtos, atendimento, horario, notasValidas, mean, csat, rate5, rate45 };
+}
     const total = arr.length;
     const itens = countSimNao(arr, "{COL_ITENS}");
     const uniforme = countSimNao(arr, "{COL_UNIFORME}");
@@ -249,6 +280,59 @@ def main():
   let barChart = null;
 
   function render(month){{
+      // ===== KPIs Detalhados (dinâmico) =====
+const tbodyDet = document.getElementById("tbodyKpisDetalhados");
+if(tbodyDet){
+  const kpis = [
+    ["KPI-01: Conformidade de Itens", pct(k.itens.sim, k.total), 90],
+    ["KPI-02: Padronização Visual (Uniforme/Crachá)", pct(k.uniforme.sim, k.total), 95],
+    ["KPI-03: Qualidade dos Produtos", pct(k.produtos.sim, k.total), 95],
+    ["KPI-04: Qualidade no Atendimento", pct(k.atendimento.sim, k.total), 95],
+    ["KPI-05: Pontualidade", pct(k.horario.sim, k.total), 90],
+    ["KPI-06: CSAT (média/5)", k.csat, 90],
+    ["KPI-07: Taxa de Notas 5", k.rate5, 80],
+    ["KPI-08: Taxa de Notas 4-5", k.rate45, 90],
+  ];
+
+  tbodyDet.innerHTML = kpis.map(([nome, val, meta]) => {
+    const status = val >= meta ? "✓ Atingida" : "✗ Não Atingida";
+    return `
+      <tr>
+        <td>${nome}</td>
+        <td>${val.toFixed(1)}%</td>
+        <td>${meta}%</td>
+        <td>${status}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// ===== Insights e Recomendações (dinâmico) =====
+const ul = document.getElementById("ulInsights");
+if(ul){
+  const itensPct = pct(k.itens.sim, k.total);
+  const naoItens = k.itens.nao;
+
+  const insights = [];
+
+  // Acuracidade de itens
+  if(itensPct < 90){
+    insights.push(`Acuracidade de itens em ${itensPct.toFixed(1)}% (meta 90%). Recomendamos reforçar conferência (checklist duplo) e rastrear causas das ${naoItens} não conformidades por falta de itens internos.`);
+  } else {
+    insights.push(`Acuracidade de itens em ${itensPct.toFixed(1)}% (meta 90%). Resultado dentro da meta. Manter padrão de conferência e monitorar recorrências.`);
+  }
+
+  // CSAT + Nota 5
+  insights.push(`CSAT médio ${k.mean.toFixed(2)}/5 (${k.csat.toFixed(1)}%). Taxa de nota 5: ${k.rate5.toFixed(1)}%.`);
+
+  // Regra alinhada com cliente
+  insights.push(`Conforme alinhado com o cliente, respostas “Recusou responder” foram consideradas como conformidade (Sim) e nota máxima (5) para fins de consolidação.`);
+
+  // Privacidade
+  insights.push(`<b>Privacidade:</b> este dashboard foi gerado apenas com indicadores agregados. Evite publicar dados pessoais em repositório público.`);
+
+  ul.innerHTML = insights.map(x => `<li>${x}</li>`).join("");
+}
     const arr = filterByMonth(DASHBOARD_DATA, month);
     const k = calc(arr);
 
