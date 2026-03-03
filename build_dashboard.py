@@ -100,10 +100,9 @@ df_dash["Submitted at"] = df_dash["Submitted at"].dt.strftime("%Y-%m-%d %H:%M:%S
 
 dashboard_data = df_dash.to_dict(orient="records")
    
-    df = df.dropna(subset=["Submitted at"])
-
-    # Se não houver dados, gera um HTML informativo
-    if len(df) == 0:
+df = df.dropna(subset=["Submitted at"])
+# Se não houver dados, gera um HTML informativo
+if len(df) == 0:
         Path("index.html").write_text(
             "<h1>Sem dados disponíveis para o período.</h1>",
             encoding="utf-8"
