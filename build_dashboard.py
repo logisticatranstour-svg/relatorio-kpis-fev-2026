@@ -316,7 +316,7 @@ if (ul) {{
   insights.push(`<b>Privacidade:</b> este dashboard foi gerado apenas com indicadores agregados. Evite publicar dados pessoais em repositório público.`);
 
   ul.innerHTML = insights.map(x => `<li>${{x}}</li>`).join("");
-}}
+}}}
 
 // ===== Insights e Recomendações (dinâmico) =====
 const ul = document.getElementById("ulInsights");
@@ -331,7 +331,7 @@ if(ul){{
     insights.push(`Acuracidade de itens em ${{itensPct.toFixed(1)}}% (meta 90%). Recomendamos reforçar conferência (checklist duplo) e rastrear causas das ${{naoItens}} não conformidades por falta de itens internos.`);
   }} else {{
     insights.push(`Acuracidade de itens em ${{itensPct.toFixed(1)}}% (meta 90%). Resultado dentro da meta. Manter padrão de conferência e monitorar recorrências.`);
-  }
+  }}
 
   // CSAT + Nota 5
   insights.push(`CSAT médio ${k.mean.toFixed(2)}/5 (${k.csat.toFixed(1)}%). Taxa de nota 5: ${k.rate5.toFixed(1)}%.`);
@@ -343,7 +343,7 @@ if(ul){{
   insights.push(`<b>Privacidade:</b> este dashboard foi gerado apenas com indicadores agregados. Evite publicar dados pessoais em repositório público.`);
 
   ul.innerHTML = insights.map(x => `<li>${x}</li>`).join("");
-}
+}}
     
     document.getElementById("monthHint").textContent = `Base do mês: ${{k.total}} respostas`;
     document.getElementById("kpiTotal").textContent = k.total;
