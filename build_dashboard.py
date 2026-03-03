@@ -255,7 +255,7 @@ def main():
   const rate5 = notasValidas ? (notas.filter(x=>x===5).length/notasValidas)*100 : 0;
   const rate45 = notasValidas ? (notas.filter(x=>x>=4).length/notasValidas)*100 : 0;
 
-  return { total, itens, uniforme, produtos, atendimento, horario, notasValidas, mean, csat, rate5, rate45 };
+  return {{ total, itens, uniforme, produtos, atendimento, horario, notasValidas, mean, csat, rate5, rate45 }};
 }
 
   function status(pos, meta){{
@@ -269,10 +269,10 @@ def main():
 
   function render(month){{
   const arr = filterByMonth(DASHBOARD_DATA, month);
-const k = calc(arr);
-      // ===== KPIs Detalhados (dinâmico) =====
+const k = calc(arr); 
+// ===== KPIs Detalhados (dinâmico) =====
 const tbodyDet = document.getElementById("tbodyKpisDetalhados");
-if(tbodyDet){
+if (tbodyDet) {{
   const kpis = [
     ["KPI-01: Conformidade de Itens", pct(k.itens.sim, k.total), 90],
     ["KPI-02: Padronização Visual (Uniforme/Crachá)", pct(k.uniforme.sim, k.total), 95],
@@ -284,18 +284,39 @@ if(tbodyDet){
     ["KPI-08: Taxa de Notas 4-5", k.rate45, 90],
   ];
 
-  tbodyDet.innerHTML = kpis.map(([nome, val, meta]) => {
-    const status = val >= meta ? "✓ Atingida" : "✗ Não Atingida";
+  tbodyDet.innerHTML = kpis.map(([nome, val, meta]) => {{
+    const st = val >= meta ? "✓ Atingida" : "✗ Não Atingida";
     return `
       <tr>
-        <td>${nome}</td>
-        <td>${val.toFixed(1)}%</td>
-        <td>${meta}%</td>
-        <td>${status}</td>
+        <td>${{nome}}</td>
+        <td>${{val.toFixed(1)}}%</td>
+        <td>${{meta}}%</td>
+        <td>${{st}}</td>
       </tr>
     `;
-  }).join("");
-}
+  }}).join("");
+}}
+
+// ===== Insights e Recomendações (dinâmico) =====
+const ul = document.getElementById("ulInsights");
+if (ul) {{
+  const itensPct = pct(k.itens.sim, k.total);
+  const naoItens = k.itens.nao;
+
+  const insights = [];
+
+  if (itensPct < 90) {{
+    insights.push(`Acuracidade de itens em ${{itensPct.toFixed(1)}}% (meta 90%). Recomendamos reforçar conferência (checklist duplo) e rastrear causas das ${{naoItens}} não conformidades por falta de itens internos.`);
+  }} else {{
+    insights.push(`Acuracidade de itens em ${{itensPct.toFixed(1)}}% (meta 90%). Resultado dentro da meta. Manter padrão de conferência e monitorar recorrências.`);
+  }}
+
+  insights.push(`CSAT médio ${{k.mean.toFixed(2)}}/5 (${{k.csat.toFixed(1)}}%). Taxa de nota 5: ${{k.rate5.toFixed(1)}}%.`);
+  insights.push(`Conforme alinhado com o cliente, respostas “Recusou responder” foram consideradas como conformidade (Sim) e nota máxima (5) para fins de consolidação.`);
+  insights.push(`<b>Privacidade:</b> este dashboard foi gerado apenas com indicadores agregados. Evite publicar dados pessoais em repositório público.`);
+
+  ul.innerHTML = insights.map(x => `<li>${{x}}</li>`).join("");
+}}
 
 // ===== Insights e Recomendações (dinâmico) =====
 const ul = document.getElementById("ulInsights");
