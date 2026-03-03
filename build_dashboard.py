@@ -257,18 +257,6 @@ def main():
 
   return { total, itens, uniforme, produtos, atendimento, horario, notasValidas, mean, csat, rate5, rate45 };
 }
-    const total = arr.length;
-    const itens = countSimNao(arr, "{COL_ITENS}");
-    const uniforme = countSimNao(arr, "{COL_UNIFORME}");
-    const produtos = countSimNao(arr, "{COL_PRODUTOS}");
-    const atendimento = countSimNao(arr, "{COL_ATENDIMENTO}");
-    const horario = countSimNao(arr, "{COL_HORARIO}");
-
-    const notas = arr.map(r => Number(r["{COL_NOTA}"])).filter(x => !Number.isNaN(x));
-    const rate5 = notas.length ? (notas.filter(x=>x===5).length/notas.length)*100 : 0;
-
-    return {{ total, itens, uniforme, produtos, atendimento, horario, notasValidas: notas.length, rate5 }};
-  }}
 
   function status(pos, meta){{
     if(pos >= meta) return "✓ Excelente";
@@ -280,6 +268,8 @@ def main():
   let barChart = null;
 
   function render(month){{
+  const arr = filterByMonth(DASHBOARD_DATA, month);
+const k = calc(arr);
       // ===== KPIs Detalhados (dinâmico) =====
 const tbodyDet = document.getElementById("tbodyKpisDetalhados");
 if(tbodyDet){
@@ -333,9 +323,7 @@ if(ul){
 
   ul.innerHTML = insights.map(x => `<li>${x}</li>`).join("");
 }
-    const arr = filterByMonth(DASHBOARD_DATA, month);
-    const k = calc(arr);
-
+    
     document.getElementById("monthHint").textContent = `Base do mês: ${{k.total}} respostas`;
     document.getElementById("kpiTotal").textContent = k.total;
     document.getElementById("kpiSat5").textContent = `${{k.rate5.toFixed(1)}}%`;
