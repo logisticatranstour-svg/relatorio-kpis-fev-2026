@@ -320,14 +320,14 @@ if (ul) {{
 
 // ===== Insights e Recomendações (dinâmico) =====
 const ul = document.getElementById("ulInsights");
-if(ul){
+if(ul){{
   const itensPct = pct(k.itens.sim, k.total);
   const naoItens = k.itens.nao;
 
   const insights = [];
 
   // Acuracidade de itens
-  if(itensPct < 90){
+  if(itensPct < 90){{
     insights.push(`Acuracidade de itens em ${itensPct.toFixed(1)}% (meta 90%). Recomendamos reforçar conferência (checklist duplo) e rastrear causas das ${naoItens} não conformidades por falta de itens internos.`);
   } else {
     insights.push(`Acuracidade de itens em ${itensPct.toFixed(1)}% (meta 90%). Resultado dentro da meta. Manter padrão de conferência e monitorar recorrências.`);
