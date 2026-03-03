@@ -100,11 +100,14 @@ df_dash["Submitted at"] = df_dash["Submitted at"].dt.strftime("%Y-%m-%d %H:%M:%S
 
 dashboard_data = df_dash.to_dict(orient="records")
     # Recorte do mês atual (opcional)
-    if USE_CURRENT_MONTH:
-        now = datetime.datetime.now()
-        start = datetime.datetime(now.year, now.month, 1)
-        end = (start + datetime.timedelta(days=32)).replace(day=1)
-        df = df[(df["Submitted at"] >= start) & (df["Submitted at"] < end)].copy()
+    dashboard_data = df_dash.to_dict(orient="records")
+
+# Recorte do mês atual (opcional)
+if USE_CURRENT_MONTH:
+    now = datetime.datetime.now()
+    start = datetime.datetime(now.year, now.month, 1)
+    end = (start + datetime.timedelta(days=32)).replace(day=1)
+    df = df[(df["Submitted at"] >= start) & (df["Submitted at"] < end)].copy()
 
     df = df.dropna(subset=["Submitted at"])
 
