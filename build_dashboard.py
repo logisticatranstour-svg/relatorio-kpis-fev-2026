@@ -328,9 +328,9 @@ if(ul){{
 
   // Acuracidade de itens
   if(itensPct < 90){{
-    insights.push(`Acuracidade de itens em ${itensPct.toFixed(1)}% (meta 90%). Recomendamos reforçar conferência (checklist duplo) e rastrear causas das ${naoItens} não conformidades por falta de itens internos.`);
-  } else {
-    insights.push(`Acuracidade de itens em ${itensPct.toFixed(1)}% (meta 90%). Resultado dentro da meta. Manter padrão de conferência e monitorar recorrências.`);
+    insights.push(`Acuracidade de itens em ${{itensPct.toFixed(1)}}% (meta 90%). Recomendamos reforçar conferência (checklist duplo) e rastrear causas das ${{naoItens}} não conformidades por falta de itens internos.`);
+  }} else {{
+    insights.push(`Acuracidade de itens em ${{itensPct.toFixed(1)}}% (meta 90%). Resultado dentro da meta. Manter padrão de conferência e monitorar recorrências.`);
   }
 
   // CSAT + Nota 5
@@ -436,7 +436,7 @@ if(ul){{
 
     function setMode(mode){{
       if(mode === 'mobile') body.classList.add('mode-mobile');
-      else body.classList.remove('mode-mobile');
+    }} else {{ body.classList.remove('mode-mobile');
       localStorage.setItem('dashboard_view_mode', mode);
     }}
 
