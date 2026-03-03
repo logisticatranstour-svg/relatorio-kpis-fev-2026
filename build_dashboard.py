@@ -238,7 +238,7 @@ def main():
     return {{sim, nao}};
   }}
 
-  function calc(arr){
+  function calc(arr){{
   const total = arr.length;
 
   const itens = countSimNao(arr, "Todos os itens foram entregues corretamente?");
@@ -256,7 +256,7 @@ def main():
   const rate45 = notasValidas ? (notas.filter(x=>x>=4).length/notasValidas)*100 : 0;
 
   return {{ total, itens, uniforme, produtos, atendimento, horario, notasValidas, mean, csat, rate5, rate45 }};
-}
+}}
 
   function status(pos, meta){{
     if(pos >= meta) return "✓ Excelente";
