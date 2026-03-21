@@ -30,21 +30,51 @@ METAS = {
     "Taxa de Notas 4-5": 90.0,
 }
 
-COLUNAS = {
-    "data": "Submitted at",
-    "paciente": "Nome do Paciente",
-    "nota": "GRAU DE SATISFAÇÃO (1 A 5)",
-    "itens": "Todos os itens foram entregues corretamente?",
-    "uniforme": "Entregador apresentou-se com crachá e uniforme?",
-    "produtos": "Produtos em bom estado e dentro da validade?",
-    "atendimento": "Atendimento cordial e respeitoso?",
-    "pontualidade": "Entrega ocorreu no horário combinado?",
+COLUMN_ALIASES = {
+    "data": [
+        "Submitted at",
+        "Submitted At",
+        "Data",
+        "Data da resposta",
+    ],
+    "paciente": [
+        "Nome do Paciente",
+        "Nome do paciente",
+        "Nome do Paciente ",
+        "Nome do Paciente/Beneficiário",
+        "Paciente",
+        "Nome",
+    ],
+    "nota": [
+        "GRAU DE SATISFAÇÃO (1 A 5)",
+        "GRAU DE SATISFACAO (1 A 5)",
+        "Grau de Satisfação (1 a 5)",
+        "Grau de satisfacao (1 a 5)",
+        "Nota",
+    ],
+    "itens": [
+        "Todos os itens foram entregues corretamente?",
+    ],
+    "uniforme": [
+        "Entregador apresentou-se com crachá e uniforme?",
+        "Entregador apresentou-se com cracha e uniforme?",
+    ],
+    "produtos": [
+        "Produtos em bom estado e dentro da validade?",
+    ],
+    "atendimento": [
+        "Atendimento cordial e respeitoso?",
+    ],
+    "pontualidade": [
+        "Entrega ocorreu no horário combinado?",
+        "Entrega ocorreu no horario combinado?",
+    ],
 }
+
 
 # =========================
 # FUNÇÕES AUXILIARES
 # =========================
-
 
 def norm_text(value) -> str:
     if pd.isna(value):
@@ -54,6 +84,42 @@ def norm_text(value) -> str:
 
 def norm_text_lower(value) -> str:
     return norm_text(value).lower()
+
+
+def normalize_header(text: str) -> str:
+    if text is None:
+        return ""
+    text = str(text).replace("\ufeff", "")
+    text = text.replace("\n", " ").replace("\r", " ")
+    text = " ".join(text.split())
+    return text.strip().lower()
+
+
+def resolve_columns(df: pd.DataFrame) -> Dict[str, str]:
+    normalized_map = {normalize_header(col): col for col in df.columns}
+    resolved = {}
+    missing = []
+
+    for key, aliases in COLUMN_ALIASES.items():
+        found = None
+        for alias in aliases:
+            alias_norm = normalize_header(alias)
+            if alias_norm in normalized_map:
+                found = normalized_map[alias_norm]
+                break
+
+        if found is None:
+            missing.append(f"{key} -> {aliases}")
+        else:
+            resolved[key] = found
+
+    if missing:
+        print("Colunas encontradas no CSV:")
+        for col in df.columns:
+            print(f" - {repr(col)}")
+        raise ValueError(f"Colunas obrigatórias não encontradas no CSV: {missing}")
+
+    return resolved
 
 
 def canonical_yes_no(value: str) -> str:
@@ -92,6 +158,21 @@ def status_text(valor: float, meta: float) -> str:
     return "X Não Atingida"
 
 
+def status_class(valor: float, meta: float) -> str:
+    if valor >= meta:
+        return "success"
+    if valor >= meta - 10:
+        return "warning"
+    return "danger"
+
+
+def detect_refused_response(row: pd.Series) -> bool:
+    for value in row.values:
+        if "recusou responder" in norm_text_lower(value):
+            return True
+    return False
+
+
 def build_occurrence(row: pd.Series) -> str:
     falhas = []
 
@@ -111,24 +192,6 @@ def build_occurrence(row: pd.Series) -> str:
     return " / ".join(falhas)
 
 
-def detect_refused_response(row: pd.Series) -> bool:
-    # Como não existe coluna específica, qualquer "Recusou responder"
-    # nas respostas principais da pesquisa será tratado como satisfatório.
-    campos_verificacao = [
-        COLUNAS["itens"],
-        COLUNAS["uniforme"],
-        COLUNAS["produtos"],
-        COLUNAS["atendimento"],
-        COLUNAS["pontualidade"],
-        COLUNAS["nota"],
-    ]
-
-    for col in campos_verificacao:
-        if col in row.index and "recusou responder" in norm_text_lower(row[col]):
-            return True
-    return False
-
-
 def month_sort_key(month_str: str):
     return datetime.strptime(month_str, "%Y-%m")
 
@@ -141,23 +204,23 @@ def pct(value: float) -> float:
 # PROCESSAMENTO PRINCIPAL
 # =========================
 
-
 def load_data() -> pd.DataFrame:
     df = pd.read_csv(SHEET_CSV_URL)
+    cols = resolve_columns(df)
 
-    missing = [v for v in COLUNAS.values() if v not in df.columns]
-    if missing:
-        raise ValueError(f"Colunas obrigatórias não encontradas no CSV: {missing}")
+    print("Mapeamento de colunas resolvido:")
+    for key, value in cols.items():
+        print(f" - {key}: {value}")
 
     df = df.copy()
 
     df["refused_response"] = df.apply(detect_refused_response, axis=1)
 
-    df["date"] = pd.to_datetime(df[COLUNAS["data"]], errors="coerce")
+    df["date"] = pd.to_datetime(df[cols["data"]], errors="coerce")
     df["month"] = df["date"].dt.strftime("%Y-%m")
 
     df["patient"] = (
-        df[COLUNAS["paciente"]]
+        df[cols["paciente"]]
         .fillna("NÃO INFORMADO")
         .astype(str)
         .str.strip()
@@ -166,28 +229,28 @@ def load_data() -> pd.DataFrame:
     )
 
     df["score"] = df.apply(
-        lambda r: 5 if r["refused_response"] else parse_score(r[COLUNAS["nota"]]),
+        lambda r: 5 if r["refused_response"] else parse_score(r[cols["nota"]]),
         axis=1,
     )
 
     df["itens_resp"] = df.apply(
-        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[COLUNAS["itens"]]),
+        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[cols["itens"]]),
         axis=1,
     )
     df["uniforme_resp"] = df.apply(
-        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[COLUNAS["uniforme"]]),
+        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[cols["uniforme"]]),
         axis=1,
     )
     df["produtos_resp"] = df.apply(
-        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[COLUNAS["produtos"]]),
+        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[cols["produtos"]]),
         axis=1,
     )
     df["atendimento_resp"] = df.apply(
-        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[COLUNAS["atendimento"]]),
+        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[cols["atendimento"]]),
         axis=1,
     )
     df["pontualidade_resp"] = df.apply(
-        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[COLUNAS["pontualidade"]]),
+        lambda r: "Sim" if r["refused_response"] else canonical_yes_no(r[cols["pontualidade"]]),
         axis=1,
     )
 
@@ -258,14 +321,14 @@ def build_category_indicators(df: pd.DataFrame) -> List[Dict]:
     return sorted(output, key=lambda x: (month_sort_key(x["month"]), x["indicador"]))
 
 
-def build_detailed_kpis(df: pd.DataFrame, categories: List[Dict]) -> List[Dict]:
+def build_detailed_kpis(df: pd.DataFrame, monthly_kpis: List[Dict], categories: List[Dict]) -> List[Dict]:
     output = []
 
     category_map = {}
     for item in categories:
         category_map.setdefault(item["month"], []).append(item)
 
-    monthly_lookup = {item["month"]: item for item in build_monthly_kpis(df)}
+    monthly_lookup = {item["month"]: item for item in monthly_kpis}
 
     for month in sorted(df["month"].dropna().unique().tolist(), key=month_sort_key):
         items = {x["indicador"]: x["positivo"] for x in category_map.get(month, [])}
@@ -290,6 +353,7 @@ def build_detailed_kpis(df: pd.DataFrame, categories: List[Dict]) -> List[Dict]:
                     "valor": pct(valor),
                     "meta": float(meta),
                     "status": status_text(valor, meta),
+                    "status_class": status_class(valor, meta),
                 }
             )
 
@@ -315,7 +379,7 @@ def build_records(df: pd.DataFrame) -> List[Dict]:
 def build_dashboard_data(df: pd.DataFrame) -> Dict:
     monthly_kpis = build_monthly_kpis(df)
     category_indicators = build_category_indicators(df)
-    detailed_kpis = build_detailed_kpis(df, category_indicators)
+    detailed_kpis = build_detailed_kpis(df, monthly_kpis, category_indicators)
     records = build_records(df)
 
     months = [item["month"] for item in monthly_kpis]
@@ -430,7 +494,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <header class="header">
       <div class="header-grid">
         <div class="logo-slot">
-          <div class="logo-box" id="logoTransTourBox">
+          <div class="logo-box">
             <img src="__LOGO_TRANSTOUR__" alt="Logo Trans Tour" onerror="this.parentElement.innerHTML='<div class=&quot;logo-fallback&quot;>LOGO<br>TRANS TOUR</div>';">
           </div>
         </div>
@@ -446,7 +510,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         </div>
 
         <div class="logo-slot" style="justify-content:flex-end">
-          <div class="logo-box" id="logoClientBox">
+          <div class="logo-box">
             <img src="__LOGO_CLIENTE__" alt="Logo Cliente" onerror="this.parentElement.innerHTML='<div class=&quot;logo-fallback&quot;>LOGO<br>CLIENTE</div>';">
           </div>
         </div>
@@ -828,7 +892,7 @@ function renderDetailedKpis(month) {
             <td>${r.kpi}</td>
             <td>${pct(r.valor)}</td>
             <td>${pct(r.meta)}</td>
-            <td class="status ${statusClass(r.valor, r.meta)}">${statusText(r.valor, r.meta)}</td>
+            <td class="status ${r.status_class}">${r.status}</td>
           </tr>
         `).join("")}
       </tbody>
@@ -931,10 +995,7 @@ def render_html(dashboard_data: Dict) -> str:
     html = html.replace("__PAGE_TITLE__", PAGE_TITLE)
     html = html.replace("__LOGO_TRANSTOUR__", LOGO_TRANSTOUR)
     html = html.replace("__LOGO_CLIENTE__", LOGO_CLIENTE)
-    html = html.replace(
-        "__DASHBOARD_JSON__",
-        json.dumps(dashboard_data, ensure_ascii=False),
-    )
+    html = html.replace("__DASHBOARD_JSON__", json.dumps(dashboard_data, ensure_ascii=False))
     return html
 
 
