@@ -1,7 +1,3 @@
-from pathlib import Path
-import textwrap
-
-script = r'''
 from __future__ import annotations
 
 import json
@@ -956,12 +952,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-'''
-
-out = Path("/mnt/data/build_dashboard_oficial.py")
-out.write_text(textwrap.dedent(script).strip() + "\n", encoding="utf-8")
-
-# Validação sintática básica
-compile(out.read_text(encoding="utf-8"), str(out), "exec")
-
-print(f"Arquivo criado: {out}")
